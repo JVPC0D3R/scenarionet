@@ -44,11 +44,37 @@ def get_metadrive_type(obj_type):
     # assert meta_type != MetaDriveType.UNSET and meta_type != "noise"
     return md_type, meta_type
 
+def get_scene_relative_timestamp(nuscenes: NuScenes, annotation_token, sensor_channel="LIDAR_TOP"):
+    """
+    Given a sample_annotation token, return the timestamp in seconds since the scene started.
+    """
+    # Get the sample_annotation and associated sample
+    ann = nuscenes.get("sample_annotation", annotation_token)
+    sample = nuscenes.get("sample", ann["sample_token"])
+
+    # Find the scene this sample belongs to
+    scene = nuscenes.get('scene', sample['scene_token'])
+
+    # Determine the first sample token of the scene
+    first_sample_token = scene["first_sample_token"]
+
+    # Get timestamps from sample_data
+    first_sd_token = nuscenes.get("sample", first_sample_token)["data"][sensor_channel]
+    first_timestamp = nuscenes.get("sample_data", first_sd_token)["timestamp"]
+
+    current_sd_token = sample["data"][sensor_channel]
+    current_timestamp = nuscenes.get("sample_data", current_sd_token)["timestamp"]
+
+
+    # Compute relative time in seconds
+    return (current_timestamp - first_timestamp) / 1e6
 
 def parse_frame(frame, nuscenes: NuScenes):
     ret = {}
     for obj_id in frame["anns"]:
         obj = nuscenes.get("sample_annotation", obj_id)
+        timestep = get_scene_relative_timestamp(nuscenes, obj_id)
+        #print(f"{obj_id}: {timestep:.2f} s since scene start")
         # velocity = nuscenes.box_velocity(obj_id)[:2]
         # if np.nan in velocity:
         velocity = np.array([0.0, 0.0])
@@ -61,7 +87,8 @@ def parse_frame(frame, nuscenes: NuScenes):
             "size": obj["size"],
             "visible": obj["visibility_token"],
             "attribute": [nuscenes.get("attribute", i)["name"] for i in obj["attribute_tokens"]],
-            "type": obj["category_name"]
+            "type": obj["category_name"],
+            'nusc_timestep': timestep
         }
     ego_token = nuscenes.get("sample_data", frame["data"]["LIDAR_TOP"])["ego_pose_token"]
     ego_state = nuscenes.get("ego_pose", ego_token)

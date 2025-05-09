@@ -37,12 +37,14 @@ if __name__ == "__main__":
     parser.add_argument("--map_radius", default=500, type=float, help="The size of map")
     parser.add_argument(
         "--future",
+        type=float,
         default=6,
         help="6 seconds by default. How many future seconds to predict. Only "
         "available if split is chosen from {}".format(prediction_split)
     )
     parser.add_argument(
         "--past",
+        type=float,
         default=2,
         help="2 seconds by default. How many past seconds are used for prediction."
         " Only available if split is chosen from {}".format(prediction_split)
