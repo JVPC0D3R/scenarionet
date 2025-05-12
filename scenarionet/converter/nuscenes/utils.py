@@ -71,10 +71,12 @@ def get_scene_relative_timestamp(nuscenes: NuScenes, annotation_token, sensor_ch
 
 def parse_frame(frame, nuscenes: NuScenes):
     ret = {}
+    # Get nuScene frame time steps
+    timestep = get_scene_relative_timestamp(nuscenes, frame["anns"][0])
+
     for obj_id in frame["anns"]:
         obj = nuscenes.get("sample_annotation", obj_id)
-        timestep = get_scene_relative_timestamp(nuscenes, obj_id)
-        #print(f"{obj_id}: {timestep:.2f} s since scene start")
+
         # velocity = nuscenes.box_velocity(obj_id)[:2]
         # if np.nan in velocity:
         velocity = np.array([0.0, 0.0])
@@ -88,7 +90,7 @@ def parse_frame(frame, nuscenes: NuScenes):
             "visible": obj["visibility_token"],
             "attribute": [nuscenes.get("attribute", i)["name"] for i in obj["attribute_tokens"]],
             "type": obj["category_name"],
-            'nusc_timestep': timestep
+            "nusc_timestep": timestep
         }
     ego_token = nuscenes.get("sample_data", frame["data"]["LIDAR_TOP"])["ego_pose_token"]
     ego_state = nuscenes.get("ego_pose", ego_token)
@@ -101,6 +103,7 @@ def parse_frame(frame, nuscenes: NuScenes):
         "velocity": np.array([0.0, 0.0]),
         # size https://en.wikipedia.org/wiki/Renault_Zoe
         "size": [4.08, 1.73, 1.56],
+        "nusc_timestep": timestep
     }
     return ret
 
@@ -164,7 +167,8 @@ def get_tracks_from_frames(nuscenes: NuScenes, scene_info, frames, num_to_interp
                 valid=np.zeros(shape=(episode_len, )),
                 length=np.zeros(shape=(episode_len, 1)),
                 width=np.zeros(shape=(episode_len, 1)),
-                height=np.zeros(shape=(episode_len, 1))
+                height=np.zeros(shape=(episode_len, 1)),
+                nusc_timestep=np.zeros(shape=(episode_len, 1)),
             ),
             metadata=dict(track_length=episode_len, type=MetaDriveType.UNSET, object_id=k, original_id=k)
         )
@@ -196,6 +200,9 @@ def get_tracks_from_frames(nuscenes: NuScenes, scene_info, frames, num_to_interp
             tracks[id]["state"]["length"][frame_idx] = state["size"][1]
             tracks[id]["state"]["width"][frame_idx] = state["size"][0]
             tracks[id]["state"]["height"][frame_idx] = state["size"][2]
+
+            # Add nuScenes time step
+            tracks[id]["state"]["nusc_timestep"][frame_idx] = state["nusc_timestep"]
 
             tracks[id]["metadata"]["original_id"] = id
             tracks[id]["metadata"]["object_id"] = id
