@@ -44,6 +44,7 @@ def get_metadrive_type(obj_type):
     # assert meta_type != MetaDriveType.UNSET and meta_type != "noise"
     return md_type, meta_type
 
+
 def get_scene_relative_timestamp(nuscenes: NuScenes, annotation_token, sensor_channel="LIDAR_TOP"):
     """
     Given a sample_annotation token, return the timestamp in seconds since the scene started.
@@ -65,9 +66,9 @@ def get_scene_relative_timestamp(nuscenes: NuScenes, annotation_token, sensor_ch
     current_sd_token = sample["data"][sensor_channel]
     current_timestamp = nuscenes.get("sample_data", current_sd_token)["timestamp"]
 
-
     # Compute relative time in seconds
     return (current_timestamp - first_timestamp) / 1e6
+
 
 def parse_frame(frame, nuscenes: NuScenes):
     ret = {}
